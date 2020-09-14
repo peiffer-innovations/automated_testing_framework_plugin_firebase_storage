@@ -116,10 +116,14 @@ class FirebaseStorageTestStore {
 
     var actualCollectionPath = (reportCollectionPath ?? 'reports');
 
-    var doc =
-        storage.ref().child(actualCollectionPath).child(report.name).child(
-              '${report.deviceInfo.deviceSignature}_${report.startTime.millisecondsSinceEpoch}.json',
-            );
+    var doc = storage
+        .ref()
+        .child(actualCollectionPath)
+        .child(report.name)
+        .child(report.version.toString())
+        .child(
+          '${report.deviceInfo.deviceSignature}_${report.startTime.millisecondsSinceEpoch}.json',
+        );
 
     await doc
         .putData(
@@ -129,6 +133,7 @@ class FirebaseStorageTestStore {
               'endTime': report.endTime?.millisecondsSinceEpoch,
               'errorSteps': report.errorSteps,
               'images': report.images.map((entity) => entity.hash).toList(),
+              'logs': report.logs,
               'name': report.name,
               'passedSteps': report.passedSteps,
               'runtimeException': report.runtimeException,

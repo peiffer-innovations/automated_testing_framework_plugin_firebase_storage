@@ -60,6 +60,10 @@ void main() async {
       autorun: kProfileMode,
       enabled: true,
       gestures: gestures,
+      // testReader: AssetTestStore(
+      //   testAssetIndex:
+      //       'packages/automated_testing_framework_example/assets/all_tests.json',
+      // ).testReader,
       testReader: store.testReader,
       testReporter: store.testReporter,
       testWidgetsEnabled: true,
