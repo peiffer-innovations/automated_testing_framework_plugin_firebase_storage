@@ -2,7 +2,7 @@ name: automated_testing_framework_plugin_firebase_storage
 description: Library to use Google's Firebase Storage as a mechanism for automated tests and test results.
 homepage: https://github.com/peiffer-innovations/automated_testing_framework_plugin_firebase_storage
 
-version: 1.0.1
+version: 1.0.2
 
 environment:
   sdk: ">=2.7.0 <3.0.0"

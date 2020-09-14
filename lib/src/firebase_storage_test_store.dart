@@ -147,30 +147,7 @@ class FirebaseStorageTestStore {
         )
         .onComplete;
 
-    if (!kIsWeb && storage != null) {
-      for (var image in report.images) {
-        var ref = storage
-            .ref()
-            .child(imagePath ?? 'images')
-            .child('${image.hash}.png');
-        var uploadTask = ref.putData(
-          image.image,
-          StorageMetadata(contentType: 'image/png'),
-        );
-
-        int lastProgress = -10;
-        uploadTask.events.listen((event) {
-          int progress =
-              event.snapshot.bytesTransferred ~/ event.snapshot.totalByteCount;
-          if (lastProgress + 10 <= progress) {
-            _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');
-            lastProgress = progress;
-          }
-        });
-
-        await uploadTask.onComplete;
-      }
-    }
+    await uploadImages(report);
 
     return result;
   }
@@ -235,5 +212,32 @@ class FirebaseStorageTestStore {
       _logger.severe('Error writing test', e, stack);
     }
     return result;
+  }
+
+  Future<void> uploadImages(TestReport report) async {
+    if (!kIsWeb) {
+      for (var image in report.images) {
+        var ref = storage
+            .ref()
+            .child(imagePath ?? 'images')
+            .child('${image.hash}.png');
+        var uploadTask = ref.putData(
+          image.image,
+          StorageMetadata(contentType: 'image/png'),
+        );
+
+        int lastProgress = -10;
+        uploadTask.events.listen((event) {
+          int progress =
+              event.snapshot.bytesTransferred ~/ event.snapshot.totalByteCount;
+          if (lastProgress + 10 <= progress) {
+            _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');
+            lastProgress = progress;
+          }
+        });
+
+        await uploadTask.onComplete;
+      }
+    }
   }
 }
