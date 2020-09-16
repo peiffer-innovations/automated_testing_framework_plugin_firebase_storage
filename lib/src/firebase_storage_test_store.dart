@@ -28,6 +28,7 @@ class FirebaseStorageTestStore {
   /// omitted, this defaults to 'reports'.
   FirebaseStorageTestStore({
     this.imagePath,
+    this.maxDataSize = 50 * 1024 * 1024, // 50mb
     this.reportCollectionPath,
     @required this.storage,
     this.testCollectionPath,
@@ -39,6 +40,8 @@ class FirebaseStorageTestStore {
   /// If [storage] is null or if this is on the web platform, this value is
   /// ignored.
   final String imagePath;
+
+  final int maxDataSize;
 
   /// Optional collection path to store test reports.  If omitted, this defaults
   /// to 'reports'.  Provided to allow for a single Firebase instance the
@@ -67,7 +70,7 @@ class FirebaseStorageTestStore {
 
       var ref =
           storage.ref().child(actualCollectionPath).child('all_tests.json');
-      var snapshot = await ref.getData(double.maxFinite.toInt());
+      var snapshot = await ref.getData(maxDataSize);
       var tests = json.decode(String.fromCharCodes(snapshot));
 
       tests.forEach((_, data) {
@@ -79,7 +82,7 @@ class FirebaseStorageTestStore {
                 .ref()
                 .child(actualCollectionPath)
                 .child('${id}_$activeVersion.json')
-                .getData(double.maxFinite.toInt());
+                .getData(maxDataSize);
 
             var realData = json.decode(String.fromCharCodes(testData));
             return Test(
@@ -181,7 +184,7 @@ class FirebaseStorageTestStore {
         'name': test.name,
         'numSteps': test.steps.length
       };
-      await storage
+      var task = await storage
           .ref()
           .child(actualCollectionPath)
           .child('all_tests.json')
@@ -190,6 +193,10 @@ class FirebaseStorageTestStore {
             StorageMetadata(contentType: 'application/json'),
           )
           .onComplete;
+      if (task.error != null) {
+        throw Exception(
+            'Error writing: [$actualCollectionPath/all_tests.json] -- code: ${task.error}');
+      }
 
       var testData = test
           .copyWith(
@@ -197,7 +204,7 @@ class FirebaseStorageTestStore {
           )
           .toJson();
 
-      await storage
+      task = await storage
           .ref()
           .child(actualCollectionPath)
           .child('${id}_$version.json')
@@ -206,6 +213,10 @@ class FirebaseStorageTestStore {
             StorageMetadata(contentType: 'application/json'),
           )
           .onComplete;
+      if (task.error != null) {
+        throw Exception(
+            'Error writing: [$actualCollectionPath/${id}_$version.json] -- code: ${task.error}');
+      }
 
       result = true;
     } catch (e, stack) {
@@ -217,10 +228,9 @@ class FirebaseStorageTestStore {
   Future<void> uploadImages(TestReport report) async {
     if (!kIsWeb) {
       for (var image in report.images) {
-        var ref = storage
-            .ref()
-            .child(imagePath ?? 'images')
-            .child('${image.hash}.png');
+        var actualImagePath = imagePath ?? 'images';
+        var ref =
+            storage.ref().child(actualImagePath).child('${image.hash}.png');
         var uploadTask = ref.putData(
           image.image,
           StorageMetadata(contentType: 'image/png'),
@@ -236,7 +246,12 @@ class FirebaseStorageTestStore {
           }
         });
 
-        await uploadTask.onComplete;
+        var task = await uploadTask.onComplete;
+        _logger.log(Level.FINER, 'Image: ${image.hash} -- COMPLETE');
+        if (task.error != null) {
+          throw Exception(
+              'Error writing: [$actualImagePath/${image.hash}.png] -- code: ${task.error}');
+        }
       }
     }
   }

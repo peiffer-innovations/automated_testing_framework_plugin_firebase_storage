@@ -1,3 +1,8 @@
+## [1.0.3] - September 15th, 2020
+
+* Fix for android's int vs long issue
+
+
 ## [1.0.2] - September 14th, 2020
 
 * Externalized the `uploadImages` function so it can be used by other plugins.
