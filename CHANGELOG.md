@@ -1,3 +1,8 @@
+## [1.0.4] - September 19th, 2020
+
+* Updated with test suite capabilities
+
+
 ## [1.0.3] - September 15th, 2020
 
 * Fix for android's int vs long issue

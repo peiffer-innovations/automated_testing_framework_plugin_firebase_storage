@@ -61,7 +61,10 @@ class FirebaseStorageTestStore {
 
   /// Implementation of the [TestReader] functional interface that can read test
   /// data from Firebase Realtime Database.
-  Future<List<PendingTest>> testReader(BuildContext context) async {
+  Future<List<PendingTest>> testReader(
+    BuildContext context, {
+    String suiteName,
+  }) async {
     List<PendingTest> results;
 
     try {
@@ -100,10 +103,13 @@ class FirebaseStorageTestStore {
           }),
           name: data['name'],
           numSteps: JsonClass.parseInt(data['numSteps']),
+          suiteName: data['suiteName'],
           version: activeVersion,
         );
 
-        results.add(pTest);
+        if (suiteName == null || suiteName == pTest.suiteName) {
+          results.add(pTest);
+        }
       });
     } catch (e, stack) {
       _logger.severe('Error loading tests', e, stack);
@@ -143,6 +149,7 @@ class FirebaseStorageTestStore {
               'startTime': report.startTime?.millisecondsSinceEpoch,
               'steps': JsonClass.toJsonList(report.steps),
               'success': report.success,
+              'suiteName': report.suiteName,
               'version': report.version,
             }).codeUnits,
           ),
@@ -182,7 +189,8 @@ class FirebaseStorageTestStore {
       tests[id] = {
         'activeVersion': version,
         'name': test.name,
-        'numSteps': test.steps.length
+        'numSteps': test.steps.length,
+        'suiteName': test.suiteName,
       };
       var task = await storage
           .ref()
