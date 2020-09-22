@@ -1,4 +1,4 @@
-# automated_testing_framework_plugin_firebase
+# automated_testing_framework_plugin_firebase_storage
 
 ## Table of Contents
 
