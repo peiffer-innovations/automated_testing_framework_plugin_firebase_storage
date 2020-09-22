@@ -41,6 +41,8 @@ class FirebaseStorageTestStore {
   /// ignored.
   final String imagePath;
 
+  /// The maximum size for data.  Due to Android's unit, ensure this remains
+  /// less than a signed 32 bit max value or else it will crash on Android.
   final int maxDataSize;
 
   /// Optional collection path to store test reports.  If omitted, this defaults
@@ -58,6 +60,94 @@ class FirebaseStorageTestStore {
   /// to 'tests'.  Provided to allow for a single Firebase instance the ability
   /// to host multiple applications or environments.
   final String testCollectionPath;
+
+  /// Cached value that will be refreshed as needed.
+  GoldenTestImages _currentGoldenTestImages;
+
+  /// Writes the golden images from the [report] to Cloud Storage and also
+  /// writes the metadata that allows the reading of the golden images.  This
+  /// will throw an exception on failure.
+  Future<void> goldenImageWriter(TestReport report) async {
+    var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
+
+    var suitePrefix =
+        report.suiteName?.isNotEmpty == true ? '${report.suiteName}_' : '';
+    var name =
+        '${suitePrefix}${report.name}_${report.deviceInfo.os}_${report.deviceInfo.orientation}_${report.deviceInfo.pixels.width}x${report.deviceInfo.pixels.height}.json';
+
+    var data = <String, String>{};
+    for (var image in (report.images ?? <TestImage>[])) {
+      if (image.goldenCompatible == true) {
+        data[image.id] = image.hash;
+      }
+    }
+    var golden = GoldenTestImages(
+      deviceInfo: report.deviceInfo,
+      goldenHashes: data,
+      suiteName: report.suiteName,
+      testName: report.name,
+      testVersion: report.version,
+    );
+
+    await uploadImages(
+      report,
+      goldenOnly: true,
+    );
+
+    var ref = storage.ref().child(actualCollectionPath).child(name);
+    var task = await ref
+        .putData(
+          utf8.encode(json.encode(golden.toJson())),
+          StorageMetadata(contentType: 'application/json'),
+        )
+        .onComplete;
+
+    if (task.error != null) {
+      throw Exception(
+          'Error writing: [$actualCollectionPath/$name] -- code: ${task.error}');
+    }
+  }
+
+  Future<Uint8List> testImageReader({
+    @required TestDeviceInfo deviceInfo,
+    @required String imageId,
+    String suiteName,
+    @required String testName,
+    int testVersion,
+  }) async {
+    GoldenTestImages golden;
+    if (_currentGoldenTestImages?.testName == testName &&
+        _currentGoldenTestImages?.suiteName == suiteName &&
+        _currentGoldenTestImages?.deviceInfo?.orientation ==
+            deviceInfo.orientation &&
+        _currentGoldenTestImages?.deviceInfo?.os == deviceInfo.os &&
+        _currentGoldenTestImages?.deviceInfo?.pixels?.width ==
+            deviceInfo?.pixels?.width &&
+        _currentGoldenTestImages?.deviceInfo?.pixels?.height ==
+            deviceInfo?.pixels?.height) {
+      golden = _currentGoldenTestImages;
+    } else {
+      var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
+
+      var suitePrefix = suiteName?.isNotEmpty == true ? '${suiteName}_' : '';
+      var name =
+          '${suitePrefix}${testName}_${deviceInfo.os}_${deviceInfo.orientation}_${deviceInfo.pixels.width}x${deviceInfo.pixels.height}.json';
+
+      var ref = storage.ref().child(actualCollectionPath).child(name);
+      var data = await ref.getData(maxDataSize);
+
+      var goldenJson = json.decode(utf8.decode(data));
+      golden = GoldenTestImages.fromDynamic(goldenJson);
+    }
+
+    Uint8List image;
+    if (golden != null) {
+      var hash = golden.goldenHashes[imageId];
+      image = await downloadImage(hash);
+    }
+
+    return image;
+  }
 
   /// Implementation of the [TestReader] functional interface that can read test
   /// data from Firebase Realtime Database.
@@ -185,7 +275,7 @@ class FirebaseStorageTestStore {
         // no-op; assume the file just doesn't exist
       }
 
-      int version = (test.version ?? 0) + 1;
+      var version = (test.version ?? 0) + 1;
       tests[id] = {
         'activeVersion': version,
         'name': test.name,
@@ -233,9 +323,27 @@ class FirebaseStorageTestStore {
     return result;
   }
 
-  Future<void> uploadImages(TestReport report) async {
+  Future<Uint8List> downloadImage(String hash) async {
+    Uint8List image;
+    var actualImagePath = imagePath ?? 'images';
+    if (hash != null) {
+      var ref = storage.ref().child(actualImagePath).child('$hash.png');
+      image = await ref.getData(maxDataSize);
+    }
+
+    return image;
+  }
+
+  Future<void> uploadImages(
+    TestReport report, {
+    bool goldenOnly = false,
+  }) async {
     if (!kIsWeb) {
-      for (var image in report.images) {
+      var images = goldenOnly == true
+          ? report.images.where((image) => image.goldenCompatible == true)
+          : report.images;
+
+      for (var image in images) {
         var actualImagePath = imagePath ?? 'images';
         var ref =
             storage.ref().child(actualImagePath).child('${image.hash}.png');
@@ -244,9 +352,9 @@ class FirebaseStorageTestStore {
           StorageMetadata(contentType: 'image/png'),
         );
 
-        int lastProgress = -10;
+        var lastProgress = -10;
         uploadTask.events.listen((event) {
-          int progress =
+          var progress =
               event.snapshot.bytesTransferred ~/ event.snapshot.totalByteCount;
           if (lastProgress + 10 <= progress) {
             _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');

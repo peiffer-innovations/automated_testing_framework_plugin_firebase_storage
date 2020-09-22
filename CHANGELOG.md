@@ -1,3 +1,8 @@
+## [1.0.5] - September 21st, 2020
+
+* Updated with golden image capabilities
+
+
 ## [1.0.4] - September 19th, 2020
 
 * Updated with test suite capabilities
