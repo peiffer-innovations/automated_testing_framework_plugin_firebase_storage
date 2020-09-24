@@ -1,3 +1,10 @@
+## [1.0.6] - September 24th, 2020
+
+* Fixed test reports to be properly encoded in UTF8
+* Applied GZIP compression to JSON to reduce storage and transfer size
+* Updated to latest framework version
+
+
 ## [1.0.5] - September 21st, 2020
 
 * Updated with golden image capabilities

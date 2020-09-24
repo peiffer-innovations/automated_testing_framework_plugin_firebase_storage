@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:automated_testing_framework/automated_testing_framework.dart';
@@ -64,6 +65,35 @@ class FirebaseStorageTestStore {
   /// Cached value that will be refreshed as needed.
   GoldenTestImages _currentGoldenTestImages;
 
+  /// Downloads an image with the given [hash] from Cloud Firestore.  Will
+  /// return [null] if the [hash] is [null].  Will throw an exception if [hash]
+  /// is not [null] but could not be retrieved.
+  Future<Uint8List> downloadImage(String hash) async {
+    Uint8List image;
+    var actualImagePath = imagePath ?? 'images';
+    if (hash != null) {
+      var ref = storage.ref().child(actualImagePath).child('$hash.png');
+      image = await ref.getData(maxDataSize);
+    }
+
+    return image;
+  }
+
+  /// Downloads a text file from Cloud Firestore.  If the text file was encoded
+  /// via GZIP, this will first decode it and then return the string.  The
+  /// [children] must contain one or more path elements to the location of the
+  /// text file.
+  Future<String> downloadTextFile(List<String> children) async {
+    var ref = storage.ref();
+    for (var child in children) {
+      ref = ref.child(child);
+    }
+
+    var data = await ref.getData(maxDataSize);
+
+    return utf8.decode(data);
+  }
+
   /// Writes the golden images from the [report] to Cloud Storage and also
   /// writes the metadata that allows the reading of the golden images.  This
   /// will throw an exception on failure.
@@ -94,20 +124,15 @@ class FirebaseStorageTestStore {
       goldenOnly: true,
     );
 
-    var ref = storage.ref().child(actualCollectionPath).child(name);
-    var task = await ref
-        .putData(
-          utf8.encode(json.encode(golden.toJson())),
-          StorageMetadata(contentType: 'application/json'),
-        )
-        .onComplete;
-
-    if (task.error != null) {
-      throw Exception(
-          'Error writing: [$actualCollectionPath/$name] -- code: ${task.error}');
-    }
+    await uploadTextFile(
+      [actualCollectionPath, name],
+      json.encode(
+        golden.toJson(),
+      ),
+    );
   }
 
+  /// Reader to read a golden image from Cloud Storage.
   Future<Uint8List> testImageReader({
     @required TestDeviceInfo deviceInfo,
     @required String imageId,
@@ -133,10 +158,9 @@ class FirebaseStorageTestStore {
       var name =
           '${suitePrefix}${testName}_${deviceInfo.os}_${deviceInfo.orientation}_${deviceInfo.pixels.width}x${deviceInfo.pixels.height}.json';
 
-      var ref = storage.ref().child(actualCollectionPath).child(name);
-      var data = await ref.getData(maxDataSize);
+      var data = await downloadTextFile([actualCollectionPath, name]);
 
-      var goldenJson = json.decode(utf8.decode(data));
+      var goldenJson = json.decode(data);
       golden = GoldenTestImages.fromDynamic(goldenJson);
     }
 
@@ -161,23 +185,23 @@ class FirebaseStorageTestStore {
       results = [];
       var actualCollectionPath = (testCollectionPath ?? 'tests');
 
-      var ref =
-          storage.ref().child(actualCollectionPath).child('all_tests.json');
-      var snapshot = await ref.getData(maxDataSize);
-      var tests = json.decode(String.fromCharCodes(snapshot));
+      var snapshot = await downloadTextFile([
+        actualCollectionPath,
+        'all_tests.json',
+      ]);
+      var tests = json.decode(snapshot);
 
       tests.forEach((_, data) {
         var activeVersion = JsonClass.parseInt(data['activeVersion']);
         var id = data['name'];
         var pTest = PendingTest(
           loader: AsyncTestLoader(({bool ignoreImages}) async {
-            var testData = await storage
-                .ref()
-                .child(actualCollectionPath)
-                .child('${id}_$activeVersion.json')
-                .getData(maxDataSize);
+            var testData = await downloadTextFile([
+              actualCollectionPath,
+              '${id}_$activeVersion.json',
+            ]);
 
-            var realData = json.decode(String.fromCharCodes(testData));
+            var realData = json.decode(testData);
             return Test(
               active: true,
               name: realData['name'],
@@ -215,37 +239,12 @@ class FirebaseStorageTestStore {
 
     var actualCollectionPath = (reportCollectionPath ?? 'reports');
 
-    var doc = storage
-        .ref()
-        .child(actualCollectionPath)
-        .child(report.name)
-        .child(report.version.toString())
-        .child(
-          '${report.deviceInfo.deviceSignature}_${report.startTime.millisecondsSinceEpoch}.json',
-        );
-
-    await doc
-        .putData(
-          Uint8List.fromList(
-            json.encode({
-              'deviceInfo': report.deviceInfo.toJson(),
-              'endTime': report.endTime?.millisecondsSinceEpoch,
-              'errorSteps': report.errorSteps,
-              'images': report.images.map((entity) => entity.hash).toList(),
-              'logs': report.logs,
-              'name': report.name,
-              'passedSteps': report.passedSteps,
-              'runtimeException': report.runtimeException,
-              'startTime': report.startTime?.millisecondsSinceEpoch,
-              'steps': JsonClass.toJsonList(report.steps),
-              'success': report.success,
-              'suiteName': report.suiteName,
-              'version': report.version,
-            }).codeUnits,
-          ),
-          StorageMetadata(contentType: 'application/json'),
-        )
-        .onComplete;
+    await uploadTextFile([
+      actualCollectionPath,
+      report.name,
+      report.version.toString(),
+      '${report.deviceInfo.deviceSignature}_${report.startTime.millisecondsSinceEpoch}.json',
+    ], json.encode(report.toJson(false)));
 
     await uploadImages(report);
 
@@ -265,12 +264,12 @@ class FirebaseStorageTestStore {
 
       var id = test.name;
 
-      var ref =
-          storage.ref().child(actualCollectionPath).child('all_tests.json');
       var tests = <String, dynamic>{};
       try {
-        var snapshot = await ref.getData(double.maxFinite.toInt());
-        tests = json.decode(String.fromCharCodes(snapshot));
+        var snapshot = await downloadTextFile(
+          [actualCollectionPath, 'all_tests.json'],
+        );
+        tests = json.decode(snapshot);
       } catch (e) {
         // no-op; assume the file just doesn't exist
       }
@@ -282,19 +281,13 @@ class FirebaseStorageTestStore {
         'numSteps': test.steps.length,
         'suiteName': test.suiteName,
       };
-      var task = await storage
-          .ref()
-          .child(actualCollectionPath)
-          .child('all_tests.json')
-          .putData(
-            Uint8List.fromList(json.encode(tests).codeUnits),
-            StorageMetadata(contentType: 'application/json'),
-          )
-          .onComplete;
-      if (task.error != null) {
-        throw Exception(
-            'Error writing: [$actualCollectionPath/all_tests.json] -- code: ${task.error}');
-      }
+      await uploadTextFile(
+        [
+          actualCollectionPath,
+          'all_tests.json',
+        ],
+        json.encode(tests),
+      );
 
       var testData = test
           .copyWith(
@@ -302,19 +295,13 @@ class FirebaseStorageTestStore {
           )
           .toJson();
 
-      task = await storage
-          .ref()
-          .child(actualCollectionPath)
-          .child('${id}_$version.json')
-          .putData(
-            Uint8List.fromList(json.encode(testData).codeUnits),
-            StorageMetadata(contentType: 'application/json'),
-          )
-          .onComplete;
-      if (task.error != null) {
-        throw Exception(
-            'Error writing: [$actualCollectionPath/${id}_$version.json] -- code: ${task.error}');
-      }
+      await uploadTextFile(
+        [
+          actualCollectionPath,
+          '${id}_$version.json',
+        ],
+        json.encode(testData),
+      );
 
       result = true;
     } catch (e, stack) {
@@ -323,17 +310,8 @@ class FirebaseStorageTestStore {
     return result;
   }
 
-  Future<Uint8List> downloadImage(String hash) async {
-    Uint8List image;
-    var actualImagePath = imagePath ?? 'images';
-    if (hash != null) {
-      var ref = storage.ref().child(actualImagePath).child('$hash.png');
-      image = await ref.getData(maxDataSize);
-    }
-
-    return image;
-  }
-
+  /// Uploads the images from the given [report].  If [goldenOnly] is [true]
+  /// then only the images marked as golden compatible will be uploaded.
   Future<void> uploadImages(
     TestReport report, {
     bool goldenOnly = false,
@@ -369,6 +347,41 @@ class FirebaseStorageTestStore {
               'Error writing: [$actualImagePath/${image.hash}.png] -- code: ${task.error}');
         }
       }
+    }
+  }
+
+  /// Uploads a text file to Cloud Firestore.  If the [gzipData] is set to
+  /// [true] then the data will be encoded via GZIP before transmission and the
+  /// encoding will be set to 'gzip', otherwise the data will be sent with
+  /// vanilla UTF8 encoding and the encoding will be set to 'utf8'.
+  ///
+  /// The [children] must contain one or more path elements to the location of
+  /// the text file.
+  Future<void> uploadTextFile(
+    List<String> children,
+    String data, {
+    bool gzipData = true,
+  }) async {
+    var ref = storage.ref();
+    for (var child in children) {
+      ref = ref.child(child);
+    }
+
+    var bytes = utf8.encode(data);
+    if (gzipData == true) {
+      bytes = gzip.encoder.convert(bytes);
+    }
+    var task = await ref
+        .putData(
+          Uint8List.fromList(bytes),
+          StorageMetadata(
+            contentEncoding: gzipData == true ? 'gzip' : 'utf8',
+            contentType: 'application/json',
+          ),
+        )
+        .onComplete;
+    if (task.error != null) {
+      throw Exception('Error writing: $children -- code: ${task.error}');
     }
   }
 }
