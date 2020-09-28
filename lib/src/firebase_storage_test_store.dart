@@ -262,7 +262,8 @@ class FirebaseStorageTestStore {
     try {
       var actualCollectionPath = (testCollectionPath ?? 'tests');
 
-      var id = test.name;
+      var id = test.name +
+          (test.suiteName?.isNotEmpty == true ? '|${test.suiteName}' : '');
 
       var tests = <String, dynamic>{};
       try {
