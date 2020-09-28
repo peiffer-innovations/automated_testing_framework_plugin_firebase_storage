@@ -1,3 +1,8 @@
+## [1.0.7+1] - September 28th, 2020
+
+* Changed format to dedupe test names / suites.
+
+
 ## [1.0.7] - September 28th, 2020
 
 * Minor update to the test store to allow for duplicate test names across test suites.

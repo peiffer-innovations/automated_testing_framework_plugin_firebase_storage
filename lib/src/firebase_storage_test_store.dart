@@ -191,9 +191,8 @@ class FirebaseStorageTestStore {
       ]);
       var tests = json.decode(snapshot);
 
-      tests.forEach((_, data) {
+      tests.forEach((id, data) {
         var activeVersion = JsonClass.parseInt(data['activeVersion']);
-        var id = data['name'];
         var pTest = PendingTest(
           loader: AsyncTestLoader(({bool ignoreImages}) async {
             var testData = await downloadTextFile([
@@ -262,8 +261,9 @@ class FirebaseStorageTestStore {
     try {
       var actualCollectionPath = (testCollectionPath ?? 'tests');
 
-      var id = test.name +
-          (test.suiteName?.isNotEmpty == true ? '|${test.suiteName}' : '');
+      var id =
+          (test.suiteName?.isNotEmpty == true ? '${test.suiteName}__' : '') +
+              test.name;
 
       var tests = <String, dynamic>{};
       try {
