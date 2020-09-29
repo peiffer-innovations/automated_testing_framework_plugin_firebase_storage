@@ -1,3 +1,8 @@
+## [1.0.8] - September 29th, 2020
+
+* Fix to properly set test suite name when reading tests from Cloud Storage.
+
+
 ## [1.0.7+1] - September 28th, 2020
 
 * Changed format to dedupe test names / suites.

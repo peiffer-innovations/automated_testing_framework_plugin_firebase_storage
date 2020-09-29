@@ -211,6 +211,7 @@ class FirebaseStorageTestStore {
                   ignoreImages: false,
                 ),
               ),
+              suiteName: realData['suiteName'],
               version: realData['version'],
             );
           }),
