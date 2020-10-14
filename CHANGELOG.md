@@ -1,3 +1,8 @@
+## [1.0.9] - October 14th, 2020
+
+* Added timestamp to `testWriter`.
+
+
 ## [1.0.8] - September 29th, 2020
 
 * Fix to properly set test suite name when reading tests from Cloud Storage.

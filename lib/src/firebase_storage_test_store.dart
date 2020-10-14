@@ -293,6 +293,7 @@ class FirebaseStorageTestStore {
 
       var testData = test
           .copyWith(
+            timestamp: DateTime.now(),
             version: version,
           )
           .toJson();
