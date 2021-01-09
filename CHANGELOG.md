@@ -1,3 +1,8 @@
+## [1.0.10] - January 9th, 2021
+
+* Updated dependencies.
+
+
 ## [1.0.9] - October 14th, 2020
 
 * Added timestamp to `testWriter`.

@@ -330,24 +330,25 @@ class FirebaseStorageTestStore {
             storage.ref().child(actualImagePath).child('${image.hash}.png');
         var uploadTask = ref.putData(
           image.image,
-          StorageMetadata(contentType: 'image/png'),
+          SettableMetadata(contentType: 'image/png'),
         );
 
         var lastProgress = -10;
-        uploadTask.events.listen((event) {
-          var progress =
-              event.snapshot.bytesTransferred ~/ event.snapshot.totalByteCount;
+        uploadTask.snapshotEvents.listen((event) {
+          var progress = event.bytesTransferred ~/ event.totalBytes;
           if (lastProgress + 10 <= progress) {
             _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');
             lastProgress = progress;
           }
         });
 
-        var task = await uploadTask.onComplete;
-        _logger.log(Level.FINER, 'Image: ${image.hash} -- COMPLETE');
-        if (task.error != null) {
-          throw Exception(
-              'Error writing: [$actualImagePath/${image.hash}.png] -- code: ${task.error}');
+        try {
+          await uploadTask;
+          _logger.log(Level.FINER, 'Image: ${image.hash} -- COMPLETE');
+        } catch (e, stack) {
+          _logger.severe(
+              'Error writing: [$actualImagePath/${image.hash}.png]', e, stack);
+          rethrow;
         }
       }
     }
@@ -374,17 +375,18 @@ class FirebaseStorageTestStore {
     if (gzipData == true) {
       bytes = gzip.encoder.convert(bytes);
     }
-    var task = await ref
-        .putData(
-          Uint8List.fromList(bytes),
-          StorageMetadata(
-            contentEncoding: gzipData == true ? 'gzip' : 'utf8',
-            contentType: 'application/json',
-          ),
-        )
-        .onComplete;
-    if (task.error != null) {
-      throw Exception('Error writing: $children -- code: ${task.error}');
+
+    try {
+      await ref.putData(
+        Uint8List.fromList(bytes),
+        SettableMetadata(
+          contentEncoding: gzipData == true ? 'gzip' : 'utf8',
+          contentType: 'application/json',
+        ),
+      );
+    } catch (e, stack) {
+      _logger.severe('Error writing: $children', e, stack);
+      rethrow;
     }
   }
 }
