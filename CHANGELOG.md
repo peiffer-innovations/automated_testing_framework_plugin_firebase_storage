@@ -1,4 +1,4 @@
-## [1.0.10] - January 9th, 2021
+## [1.0.10+1] - January 17th, 2021
 
 * Updated dependencies.
 
