@@ -324,31 +324,39 @@ class FirebaseStorageTestStore {
           ? report.images.where((image) => image.goldenCompatible == true)
           : report.images;
 
+      var hashes = <String>{};
+
       for (var image in images) {
-        var actualImagePath = imagePath ?? 'images';
-        var ref =
-            storage.ref().child(actualImagePath).child('${image.hash}.png');
-        var uploadTask = ref.putData(
-          image.image,
-          SettableMetadata(contentType: 'image/png'),
-        );
+        if (!hashes.contains(image.hash)) {
+          hashes.add(image.hash);
 
-        var lastProgress = -10;
-        uploadTask.snapshotEvents.listen((event) {
-          var progress = event.bytesTransferred ~/ event.totalBytes;
-          if (lastProgress + 10 <= progress) {
-            _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');
-            lastProgress = progress;
+          var actualImagePath = imagePath ?? 'images';
+          var ref =
+              storage.ref().child(actualImagePath).child('${image.hash}.png');
+          var uploadTask = ref.putData(
+            image.image,
+            SettableMetadata(contentType: 'image/png'),
+          );
+
+          var lastProgress = -10;
+          uploadTask.snapshotEvents.listen((event) {
+            var progress = event.bytesTransferred ~/ event.totalBytes;
+            if (lastProgress + 10 <= progress) {
+              _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');
+              lastProgress = progress;
+            }
+          });
+
+          try {
+            await uploadTask;
+            _logger.log(Level.FINER, 'Image: ${image.hash} -- COMPLETE');
+          } catch (e, stack) {
+            _logger.severe(
+                'Error writing: [$actualImagePath/${image.hash}.png]',
+                e,
+                stack);
+            rethrow;
           }
-        });
-
-        try {
-          await uploadTask;
-          _logger.log(Level.FINER, 'Image: ${image.hash} -- COMPLETE');
-        } catch (e, stack) {
-          _logger.severe(
-              'Error writing: [$actualImagePath/${image.hash}.png]', e, stack);
-          rethrow;
         }
       }
     }

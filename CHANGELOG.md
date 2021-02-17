@@ -1,3 +1,8 @@
+## [1.0.11] - February 17th, 2021
+
+* Updated to not repeatedly upload images that have the same hash in the same report.
+
+
 ## [1.0.10+1] - January 17th, 2021
 
 * Updated dependencies.
