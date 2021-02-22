@@ -1,3 +1,8 @@
+## [2.0.0] - February 21st, 2021
+
+* Updating to latest framework version
+
+
 ## [1.0.11] - February 17th, 2021
 
 * Updated to not repeatedly upload images that have the same hash in the same report.
