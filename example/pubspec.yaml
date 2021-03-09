@@ -6,13 +6,12 @@ publish_to: "none"
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.7.0 <3.0.0"
+  sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
-  automated_testing_framework_example: any
+  automated_testing_framework_example: ^2.0.0
   flutter:
     sdk: flutter
-  websafe_platform: ^1.1.0
 
 dependency_overrides:
   # automated_testing_framework:
@@ -23,8 +22,6 @@ dependency_overrides:
     path: ../
 
 dev_dependencies:
-  flutter_launcher_icons: ^0.8.1
-  flutter_native_splash: ^0.1.9
   flutter_test:
     sdk: flutter
 

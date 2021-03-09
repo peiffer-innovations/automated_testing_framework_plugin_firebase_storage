@@ -31,16 +31,16 @@ class FirebaseStorageTestStore {
     this.imagePath,
     this.maxDataSize = 50 * 1024 * 1024, // 50mb
     this.reportCollectionPath,
-    @required this.storage,
+    required this.storage,
     this.testCollectionPath,
-  }) : assert(storage != null);
+  });
 
   static final Logger _logger = Logger('FirebaseStorageTestStore');
 
   /// Optional path for screenshots to be uploated to within Firebase Storage.
   /// If [storage] is null or if this is on the web platform, this value is
   /// ignored.
-  final String imagePath;
+  final String? imagePath;
 
   /// The maximum size for data.  Due to Android's unit, ensure this remains
   /// less than a signed 32 bit max value or else it will crash on Android.
@@ -49,7 +49,7 @@ class FirebaseStorageTestStore {
   /// Optional collection path to store test reports.  If omitted, this defaults
   /// to 'reports'.  Provided to allow for a single Firebase instance the
   /// ability to host multiple applications or environments.
-  final String reportCollectionPath;
+  final String? reportCollectionPath;
 
   /// Optional [FirebaseStorage] reference object.  If set, and the platform is
   /// not web, then this will be used to upload screenshot results from test
@@ -60,16 +60,16 @@ class FirebaseStorageTestStore {
   /// Optional collection path to store test data.  If omitted, this defaults
   /// to 'tests'.  Provided to allow for a single Firebase instance the ability
   /// to host multiple applications or environments.
-  final String testCollectionPath;
+  final String? testCollectionPath;
 
   /// Cached value that will be refreshed as needed.
-  GoldenTestImages _currentGoldenTestImages;
+  GoldenTestImages? _currentGoldenTestImages;
 
   /// Downloads an image with the given [hash] from Cloud Firestore.  Will
   /// return [null] if the [hash] is [null].  Will throw an exception if [hash]
   /// is not [null] but could not be retrieved.
-  Future<Uint8List> downloadImage(String hash) async {
-    Uint8List image;
+  Future<Uint8List?> downloadImage(String? hash) async {
+    Uint8List? image;
     var actualImagePath = imagePath ?? 'images';
     if (hash != null) {
       var ref = storage.ref().child(actualImagePath).child('$hash.png');
@@ -91,7 +91,7 @@ class FirebaseStorageTestStore {
 
     var data = await ref.getData(maxDataSize);
 
-    return utf8.decode(data);
+    return utf8.decode(data!.toList());
   }
 
   /// Writes the golden images from the [report] to Cloud Storage and also
@@ -103,19 +103,19 @@ class FirebaseStorageTestStore {
     var suitePrefix =
         report.suiteName?.isNotEmpty == true ? '${report.suiteName}_' : '';
     var name =
-        '${suitePrefix}${report.name}_${report.deviceInfo.os}_${report.deviceInfo.orientation}_${report.deviceInfo.pixels.width}x${report.deviceInfo.pixels.height}.json';
+        '${suitePrefix}${report.name}_${report.deviceInfo!.os}_${report.deviceInfo!.orientation}_${report.deviceInfo!.pixels!.width}x${report.deviceInfo!.pixels!.height}.json';
 
     var data = <String, String>{};
-    for (var image in (report.images ?? <TestImage>[])) {
+    for (var image in report.images) {
       if (image.goldenCompatible == true) {
         data[image.id] = image.hash;
       }
     }
     var golden = GoldenTestImages(
-      deviceInfo: report.deviceInfo,
+      deviceInfo: report.deviceInfo!,
       goldenHashes: data,
       suiteName: report.suiteName,
-      testName: report.name,
+      testName: report.name!,
       testVersion: report.version,
     );
 
@@ -133,30 +133,30 @@ class FirebaseStorageTestStore {
   }
 
   /// Reader to read a golden image from Cloud Storage.
-  Future<Uint8List> testImageReader({
-    @required TestDeviceInfo deviceInfo,
-    @required String imageId,
-    String suiteName,
-    @required String testName,
-    int testVersion,
+  Future<Uint8List?> testImageReader({
+    required TestDeviceInfo deviceInfo,
+    required String imageId,
+    String? suiteName,
+    required String testName,
+    int? testVersion,
   }) async {
-    GoldenTestImages golden;
+    GoldenTestImages? golden;
     if (_currentGoldenTestImages?.testName == testName &&
         _currentGoldenTestImages?.suiteName == suiteName &&
-        _currentGoldenTestImages?.deviceInfo?.orientation ==
+        _currentGoldenTestImages?.deviceInfo.orientation ==
             deviceInfo.orientation &&
-        _currentGoldenTestImages?.deviceInfo?.os == deviceInfo.os &&
-        _currentGoldenTestImages?.deviceInfo?.pixels?.width ==
-            deviceInfo?.pixels?.width &&
-        _currentGoldenTestImages?.deviceInfo?.pixels?.height ==
-            deviceInfo?.pixels?.height) {
+        _currentGoldenTestImages?.deviceInfo.os == deviceInfo.os &&
+        _currentGoldenTestImages?.deviceInfo.pixels?.width ==
+            deviceInfo.pixels?.width &&
+        _currentGoldenTestImages?.deviceInfo.pixels?.height ==
+            deviceInfo.pixels?.height) {
       golden = _currentGoldenTestImages;
     } else {
       var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
 
       var suitePrefix = suiteName?.isNotEmpty == true ? '${suiteName}_' : '';
       var name =
-          '${suitePrefix}${testName}_${deviceInfo.os}_${deviceInfo.orientation}_${deviceInfo.pixels.width}x${deviceInfo.pixels.height}.json';
+          '${suitePrefix}${testName}_${deviceInfo.os}_${deviceInfo.orientation}_${deviceInfo.pixels!.width}x${deviceInfo.pixels!.height}.json';
 
       var data = await downloadTextFile([actualCollectionPath, name]);
 
@@ -164,9 +164,9 @@ class FirebaseStorageTestStore {
       golden = GoldenTestImages.fromDynamic(goldenJson);
     }
 
-    Uint8List image;
+    Uint8List? image;
     if (golden != null) {
-      var hash = golden.goldenHashes[imageId];
+      var hash = golden.goldenHashes![imageId];
       image = await downloadImage(hash);
     }
 
@@ -176,10 +176,10 @@ class FirebaseStorageTestStore {
   /// Implementation of the [TestReader] functional interface that can read test
   /// data from Firebase Realtime Database.
   Future<List<PendingTest>> testReader(
-    BuildContext context, {
-    String suiteName,
+    BuildContext? context, {
+    String? suiteName,
   }) async {
-    List<PendingTest> results;
+    List<PendingTest>? results;
 
     try {
       results = [];
@@ -192,9 +192,9 @@ class FirebaseStorageTestStore {
       var tests = json.decode(snapshot);
 
       tests.forEach((id, data) {
-        var activeVersion = JsonClass.parseInt(data['activeVersion']);
+        var activeVersion = JsonClass.parseInt(data['activeVersion'])!;
         var pTest = PendingTest(
-          loader: AsyncTestLoader(({bool ignoreImages}) async {
+          loader: AsyncTestLoader(({bool? ignoreImages}) async {
             var testData = await downloadTextFile([
               actualCollectionPath,
               '${id}_$activeVersion.json',
@@ -216,13 +216,13 @@ class FirebaseStorageTestStore {
             );
           }),
           name: data['name'],
-          numSteps: JsonClass.parseInt(data['numSteps']),
+          numSteps: JsonClass.parseInt(data['numSteps'])!,
           suiteName: data['suiteName'],
           version: activeVersion,
         );
 
         if (suiteName == null || suiteName == pTest.suiteName) {
-          results.add(pTest);
+          results!.add(pTest);
         }
       });
     } catch (e, stack) {
@@ -243,7 +243,7 @@ class FirebaseStorageTestStore {
       actualCollectionPath,
       report.name,
       report.version.toString(),
-      '${report.deviceInfo.deviceSignature}_${report.startTime.millisecondsSinceEpoch}.json',
+      '${report.deviceInfo!.deviceSignature}_${report.startTime!.millisecondsSinceEpoch}.json',
     ], json.encode(report.toJson(false)));
 
     await uploadImages(report);
@@ -264,9 +264,9 @@ class FirebaseStorageTestStore {
 
       var id =
           (test.suiteName?.isNotEmpty == true ? '${test.suiteName}__' : '') +
-              test.name;
+              (test.name ?? 'unknown');
 
-      var tests = <String, dynamic>{};
+      Map<String, dynamic>? tests = <String, dynamic>{};
       try {
         var snapshot = await downloadTextFile(
           [actualCollectionPath, 'all_tests.json'],
@@ -276,8 +276,8 @@ class FirebaseStorageTestStore {
         // no-op; assume the file just doesn't exist
       }
 
-      var version = (test.version ?? 0) + 1;
-      tests[id] = {
+      var version = test.version + 1;
+      tests![id] = {
         'activeVersion': version,
         'name': test.name,
         'numSteps': test.steps.length,
@@ -334,7 +334,7 @@ class FirebaseStorageTestStore {
           var ref =
               storage.ref().child(actualImagePath).child('${image.hash}.png');
           var uploadTask = ref.putData(
-            image.image,
+            image.image!,
             SettableMetadata(contentType: 'image/png'),
           );
 
@@ -370,13 +370,13 @@ class FirebaseStorageTestStore {
   /// The [children] must contain one or more path elements to the location of
   /// the text file.
   Future<void> uploadTextFile(
-    List<String> children,
+    List<String?> children,
     String data, {
     bool gzipData = true,
   }) async {
     var ref = storage.ref();
     for (var child in children) {
-      ref = ref.child(child);
+      ref = ref.child(child!);
     }
 
     var bytes = utf8.encode(data);
