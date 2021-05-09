@@ -1,4 +1,4 @@
-## [3.0.0+1] - May 9th, 2021
+## [3.0.0+2] - May 9th, 2021
 
 * Dependency updates
 
