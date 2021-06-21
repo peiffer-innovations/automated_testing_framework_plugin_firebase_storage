@@ -66,14 +66,22 @@ class FirebaseStorageTestStore {
   GoldenTestImages? _currentGoldenTestImages;
 
   /// Downloads an image with the given [hash] from Cloud Firestore.  Will
-  /// return [null] if the [hash] is [null].  Will throw an exception if [hash]
-  /// is not [null] but could not be retrieved.
+  /// return `null` if the [hash] is `null`.  Will throw an exception if [hash]
+  /// is not `null` but could not be retrieved.
   Future<Uint8List?> downloadImage(String? hash) async {
     Uint8List? image;
     var actualImagePath = imagePath ?? 'images';
     if (hash != null) {
       var ref = storage.ref().child(actualImagePath).child('$hash.png');
       image = await ref.getData(maxDataSize);
+
+      if (image == null) {
+        throw Exception(
+          '[DOWNLOAD_IMAGE]: unable to download image -- [${ref.fullPath}]',
+        );
+      }
+    } else {
+      _logger.warning('[DOWNLOAD_IMAGE]: hash is null');
     }
 
     return image;
@@ -100,10 +108,8 @@ class FirebaseStorageTestStore {
   Future<void> goldenImageWriter(TestReport report) async {
     var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
 
-    var suitePrefix =
-        report.suiteName?.isNotEmpty == true ? '${report.suiteName}_' : '';
-    var name =
-        '${suitePrefix}${report.name}_${report.deviceInfo!.os}_${report.deviceInfo!.orientation}_${report.deviceInfo!.pixels!.width}x${report.deviceInfo!.pixels!.height}.json';
+    var goldenId = GoldenTestImages.createIdFromReport(report);
+    var name = '$goldenId.json';
 
     var data = <String, String>{};
     for (var image in report.images) {
@@ -140,23 +146,18 @@ class FirebaseStorageTestStore {
     required String testName,
     int? testVersion,
   }) async {
+    var goldenId = GoldenTestImages.createId(
+      deviceInfo: deviceInfo,
+      suiteName: suiteName,
+      testName: testName,
+    );
     GoldenTestImages? golden;
-    if (_currentGoldenTestImages?.testName == testName &&
-        _currentGoldenTestImages?.suiteName == suiteName &&
-        _currentGoldenTestImages?.deviceInfo.orientation ==
-            deviceInfo.orientation &&
-        _currentGoldenTestImages?.deviceInfo.os == deviceInfo.os &&
-        _currentGoldenTestImages?.deviceInfo.pixels?.width ==
-            deviceInfo.pixels?.width &&
-        _currentGoldenTestImages?.deviceInfo.pixels?.height ==
-            deviceInfo.pixels?.height) {
+    if (_currentGoldenTestImages?.id == goldenId) {
       golden = _currentGoldenTestImages;
     } else {
       var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
 
-      var suitePrefix = suiteName?.isNotEmpty == true ? '${suiteName}_' : '';
-      var name =
-          '${suitePrefix}${testName}_${deviceInfo.os}_${deviceInfo.orientation}_${deviceInfo.pixels!.width}x${deviceInfo.pixels!.height}.json';
+      var name = '$goldenId.json';
 
       var data = await downloadTextFile([actualCollectionPath, name]);
 

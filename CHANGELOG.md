@@ -1,3 +1,9 @@
+## [3.0.1] - June 21th, 2021
+
+* Added logging to the image loading.
+* Fixed to properly throw an exception when an image fails to download (as the docs already claimed it would).
+
+
 ## [3.0.0+2] - May 9th, 2021
 
 * Dependency updates
