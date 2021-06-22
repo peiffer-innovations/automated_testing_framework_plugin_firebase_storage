@@ -1,3 +1,8 @@
+## [3.0.1+1] - June 22nd, 2021
+
+* Updated with the latest framework.
+
+
 ## [3.0.1] - June 21th, 2021
 
 * Added logging to the image loading.
