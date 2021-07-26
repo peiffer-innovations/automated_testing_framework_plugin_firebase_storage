@@ -1,3 +1,8 @@
+## [4.0.0] - July 26th, 2021
+
+* Dependency update
+
+
 ## [3.0.1+1] - June 22nd, 2021
 
 * Updated with the latest framework.
