@@ -15,10 +15,10 @@ dependencies:
   firebase_storage: ^10.0.3
   flutter:
     sdk: flutter
-  form_validation: ^2.0.0
-  json_class: ^2.0.0+1
+  form_validation: ^2.1.0
+  json_class: ^2.1.2+1
   logging: ^1.0.2
-  static_translations: ^2.0.2
+  static_translations: ^2.1.0
 
 # dependency_overrides:
 #   automated_testing_framework:
