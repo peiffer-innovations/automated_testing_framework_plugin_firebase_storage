@@ -30,7 +30,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   var credentials =
-      json.decode(await rootBundle.loadString('assets/login.json'));
+      json.decode(await rootBundle.loadString('assets/secrets/login.json'));
   await Firebase.initializeApp();
   await FirebaseAuth.instance.signInWithEmailAndPassword(
     email: credentials['username'],

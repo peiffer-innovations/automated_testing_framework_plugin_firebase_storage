@@ -8,7 +8,7 @@
 .buildlog/
 .history
 .svn/
-assets/login.json
+assets/secrets/login.json
 
 # IntelliJ related
 *.iml
