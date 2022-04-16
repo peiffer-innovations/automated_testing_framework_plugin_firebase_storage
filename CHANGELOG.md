@@ -1,3 +1,8 @@
+## [4.0.1+3] - April 16th, 2022
+
+* Dependency update
+
+
 ## [4.0.1+2] - February 16th, 2022
 
 * Dependency update
