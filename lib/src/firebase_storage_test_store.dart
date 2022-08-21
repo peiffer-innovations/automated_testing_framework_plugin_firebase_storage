@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:automated_testing_framework/automated_testing_framework.dart';
 import 'package:firebase_storage/firebase_storage.dart';
