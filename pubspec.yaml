@@ -3,31 +3,30 @@ description: "Library to use Google's Firebase Storage as a mechanism for automa
 homepage: 'https://github.com/peiffer-innovations/automated_testing_framework_plugin_firebase_storage'
 version: '5.0.0+22'
 
-environment: 
-  sdk: '>=2.17.0 <3.0.0'
+environment:
+  sdk: '>=2.18.0 <3.0.0'
 
-dependencies: 
+dependencies:
   automated_testing_framework: '^4.0.7+5'
   convert: '^3.1.1'
   firebase_auth: '^4.1.1'
   firebase_core: '^2.1.1'
   firebase_storage: '^11.0.4'
-  flutter: 
+  flutter:
     sdk: 'flutter'
   form_validation: '^2.1.0+22'
   json_class: '^2.1.2+13'
   logging: '^1.1.0'
   static_translations: '^2.1.1+16'
 
-dev_dependencies: 
-  flutter_test: 
+dev_dependencies:
+  flutter_test:
     sdk: 'flutter'
 
-
-flutter: 
+flutter:
   uses-material-design: true
 
-ignore_updates: 
+ignore_updates:
   - 'archive'
   - 'async'
   - 'boolean_selector'
