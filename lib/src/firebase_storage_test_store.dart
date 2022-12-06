@@ -69,9 +69,9 @@ class FirebaseStorageTestStore {
   /// is not `null` but could not be retrieved.
   Future<Uint8List?> downloadImage(String? hash) async {
     Uint8List? image;
-    var actualImagePath = imagePath ?? 'images';
+    final actualImagePath = imagePath ?? 'images';
     if (hash != null) {
-      var ref = storage.ref().child(actualImagePath).child('$hash.png');
+      final ref = storage.ref().child(actualImagePath).child('$hash.png');
       image = await ref.getData(maxDataSize);
 
       if (image == null) {
@@ -96,7 +96,7 @@ class FirebaseStorageTestStore {
       ref = ref.child(child);
     }
 
-    var data = await ref.getData(maxDataSize);
+    final data = await ref.getData(maxDataSize);
 
     return utf8.decode(data!.toList());
   }
@@ -105,18 +105,18 @@ class FirebaseStorageTestStore {
   /// writes the metadata that allows the reading of the golden images.  This
   /// will throw an exception on failure.
   Future<void> goldenImageWriter(TestReport report) async {
-    var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
+    final actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
 
-    var goldenId = GoldenTestImages.createIdFromReport(report);
-    var name = '$goldenId.json';
+    final goldenId = GoldenTestImages.createIdFromReport(report);
+    final name = '$goldenId.json';
 
-    var data = <String, String>{};
+    final data = <String, String>{};
     for (var image in report.images) {
       if (image.goldenCompatible == true) {
         data[image.id] = image.hash;
       }
     }
-    var golden = GoldenTestImages(
+    final golden = GoldenTestImages(
       deviceInfo: report.deviceInfo!,
       goldenHashes: data,
       suiteName: report.suiteName,
@@ -145,7 +145,7 @@ class FirebaseStorageTestStore {
     required String testName,
     int? testVersion,
   }) async {
-    var goldenId = GoldenTestImages.createId(
+    final goldenId = GoldenTestImages.createId(
       deviceInfo: deviceInfo,
       suiteName: suiteName,
       testName: testName,
@@ -154,19 +154,19 @@ class FirebaseStorageTestStore {
     if (_currentGoldenTestImages?.id == goldenId) {
       golden = _currentGoldenTestImages;
     } else {
-      var actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
+      final actualCollectionPath = '${testCollectionPath ?? 'tests'}/goldens';
 
-      var name = '$goldenId.json';
+      final name = '$goldenId.json';
 
-      var data = await downloadTextFile([actualCollectionPath, name]);
+      final data = await downloadTextFile([actualCollectionPath, name]);
 
-      var goldenJson = json.decode(data);
+      final goldenJson = json.decode(data);
       golden = GoldenTestImages.fromDynamic(goldenJson);
     }
 
     Uint8List? image;
     if (golden != null) {
-      var hash = golden.goldenHashes![imageId];
+      final hash = golden.goldenHashes![imageId];
       image = await downloadImage(hash);
     }
 
@@ -183,24 +183,24 @@ class FirebaseStorageTestStore {
 
     try {
       results = [];
-      var actualCollectionPath = (testCollectionPath ?? 'tests');
+      final actualCollectionPath = (testCollectionPath ?? 'tests');
 
-      var snapshot = await downloadTextFile([
+      final snapshot = await downloadTextFile([
         actualCollectionPath,
         'all_tests.json',
       ]);
-      var tests = json.decode(snapshot);
+      final tests = json.decode(snapshot);
 
       tests.forEach((id, data) {
-        var activeVersion = JsonClass.parseInt(data['activeVersion'])!;
-        var pTest = PendingTest(
+        final activeVersion = JsonClass.parseInt(data['activeVersion'])!;
+        final pTest = PendingTest(
           loader: AsyncTestLoader(({bool? ignoreImages}) async {
-            var testData = await downloadTextFile([
+            final testData = await downloadTextFile([
               actualCollectionPath,
               '${id}_$activeVersion.json',
             ]);
 
-            var realData = json.decode(testData);
+            final realData = json.decode(testData);
             return Test(
               active: true,
               name: realData['name'],
@@ -235,9 +235,9 @@ class FirebaseStorageTestStore {
   /// Implementation of the [TestReport] functional interface that can submit
   /// test reports to Firebase Realtime Database.
   Future<bool> testReporter(TestReport report) async {
-    var result = false;
+    final result = false;
 
-    var actualCollectionPath = (reportCollectionPath ?? 'reports');
+    final actualCollectionPath = (reportCollectionPath ?? 'reports');
 
     await uploadTextFile([
       actualCollectionPath,
@@ -260,15 +260,15 @@ class FirebaseStorageTestStore {
     var result = false;
 
     try {
-      var actualCollectionPath = (testCollectionPath ?? 'tests');
+      final actualCollectionPath = (testCollectionPath ?? 'tests');
 
-      var id =
+      final id =
           (test.suiteName?.isNotEmpty == true ? '${test.suiteName}__' : '') +
               (test.name ?? 'unknown');
 
       Map<String, dynamic>? tests = <String, dynamic>{};
       try {
-        var snapshot = await downloadTextFile(
+        final snapshot = await downloadTextFile(
           [actualCollectionPath, 'all_tests.json'],
         );
         tests = json.decode(snapshot);
@@ -276,7 +276,7 @@ class FirebaseStorageTestStore {
         // no-op; assume the file just doesn't exist
       }
 
-      var version = test.version + 1;
+      final version = test.version + 1;
       tests![id] = {
         'activeVersion': version,
         'name': test.name,
@@ -291,7 +291,7 @@ class FirebaseStorageTestStore {
         json.encode(tests),
       );
 
-      var testData = test
+      final testData = test
           .copyWith(
             timestamp: DateTime.now(),
             version: version,
@@ -320,27 +320,27 @@ class FirebaseStorageTestStore {
     bool goldenOnly = false,
   }) async {
     if (!kIsWeb) {
-      var images = goldenOnly == true
+      final images = goldenOnly == true
           ? report.images.where((image) => image.goldenCompatible == true)
           : report.images;
 
-      var hashes = <String>{};
+      final hashes = <String>{};
 
       for (var image in images) {
         if (!hashes.contains(image.hash)) {
           hashes.add(image.hash);
 
-          var actualImagePath = imagePath ?? 'images';
-          var ref =
+          final actualImagePath = imagePath ?? 'images';
+          final ref =
               storage.ref().child(actualImagePath).child('${image.hash}.png');
-          var uploadTask = ref.putData(
+          final uploadTask = ref.putData(
             image.image!,
             SettableMetadata(contentType: 'image/png'),
           );
 
           var lastProgress = -10;
           uploadTask.snapshotEvents.listen((event) {
-            var progress = event.bytesTransferred ~/ event.totalBytes;
+            final progress = event.bytesTransferred ~/ event.totalBytes;
             if (lastProgress + 10 <= progress) {
               _logger.log(Level.FINER, 'Image: ${image.hash} -- $progress%');
               lastProgress = progress;
