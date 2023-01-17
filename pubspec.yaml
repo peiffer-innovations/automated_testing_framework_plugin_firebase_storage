@@ -1,21 +1,21 @@
 name: 'automated_testing_framework_plugin_firebase_storage'
 description: "Library to use Google's Firebase Storage as a mechanism for automated tests and test results."
 homepage: 'https://github.com/peiffer-innovations/automated_testing_framework_plugin_firebase_storage'
-version: '5.0.0+29'
+version: '5.0.0+30'
 
 environment: 
   sdk: '>=2.18.0 <3.0.0'
 
 dependencies: 
-  automated_testing_framework: '^4.0.7+13'
+  automated_testing_framework: '^4.0.7+14'
   convert: '^3.1.1'
   firebase_auth: '^4.2.5'
   firebase_core: '^2.4.1'
   firebase_storage: '^11.0.10'
   flutter: 
     sdk: 'flutter'
-  form_validation: '^2.2.0+4'
-  json_class: '^2.1.4'
+  form_validation: '^2.2.0+5'
+  json_class: '^2.1.4+1'
   logging: '^1.1.0'
   static_translations: '^2.1.1+21'
 
